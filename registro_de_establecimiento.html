@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validación Registro de Establecimiento</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #f8fafc;
+      color: #334155;
+    }
+
+    #sidebar {
+      width: 400px;
+      height: 100%;
+      background: #ffffff;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+    }
+
+    .header {
+      padding: 16px;
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    .header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 16px;
+      overflow-y: auto;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748b;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    input[type="text"], input[type="number"], input[type="file"], select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      outline: none;
+      background-color: #ffffff;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
+      border-color: #2563eb;
+    }
+
+    .row-inputs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row-inputs .form-group {
+      flex: 1;
+    }
+
+    button {
+      padding: 9px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background-color: #2563eb; color: #ffffff; }
+    .btn-primary:hover { background-color: #1d4ed8; }
+
+    .btn-secondary { background-color: #64748b; color: #ffffff; }
+    .btn-secondary:hover { background-color: #475569; }
+
+    .btn-danger {
+      background-color: #ef4444;
+      color: #ffffff;
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+    }
+    .btn-danger:hover { background-color: #dc2626; }
+
+    .btn-success {
+      background-color: #16a34a;
+      color: #ffffff;
+      width: 100%;
+      padding: 10px;
+    }
+    .btn-success:hover { background-color: #15803d; }
+
+    .btn-kml {
+      background-color: #0284c7;
+      color: #ffffff;
+      width: 100%;
+      padding: 8px 10px;
+    }
+    .btn-kml:hover { background-color: #0369a1; }
+
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid #2563eb;
+      color: #2563eb;
+      width: 100%;
+    }
+    .btn-outline:hover { background-color: #eff6ff; }
+    .btn-outline.active { background-color: #2563eb; color: #ffffff; }
+
+    .status-indicator {
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    .consult-links-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .btn-consult-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background-color: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      color: #2563eb;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-consult-link:hover {
+      background-color: #eff6ff;
+      border-color: #2563eb;
+      color: #1d4ed8;
+    }
+
+    #results {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .result-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .result-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .result-card.match { border-left-color: #22c55e; background: #f0fdf4; }
+    .result-card.declared-far { border-left-color: #f97316; background: #fff7ed; }
+    .result-card.mismatch { border-left-color: #ef4444; background: #fef2f2; }
+    .result-card.not-found { border-left-color: #eab308; background: #fefce8; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .badge-ok { background: #dcfce7; color: #15803d; }
+    .badge-error { background: #fee2e2; color: #b91c1c; }
+    .badge-warn { background: #fef9c3; color: #a16207; }
+
+    .padron-tag {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin: 1px;
+    }
+    .padron-tag-match { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .padron-tag-far { background-color: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
+    .padron-tag-mismatch { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+    .card-section {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+    }
+
+    .card-section-title {
+      font-weight: 700;
+      font-size: 0.75rem;
+      color: #475569;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 2px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .padron-label {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      color: #111827;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px #ffffff, 1px 0 2px #ffffff, -1px 0 2px #ffffff, 0 -1px 2px #ffffff;
+      pointer-events: none;
+    }
+
+    #map {
+      flex-grow: 1;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div class="header">
+      <h2>Validación Registro de Establecimiento</h2>
+    </div>
+
+    <div class="content">
+      <div>
+        <div class="section-title">1. Archivos Base y Filtro</div>
+        
+        <div class="form-group">
+          <label>GeoJSON Padrones Reales:</label>
+          <input type="file" id="inputGeoJSON" accept=".geojson,.json" onchange="cargarGeoJSON(event)">
+          <div id="statusGeoJSON" class="status-indicator">GeoJSON: No cargado</div>
+        </div>
+
+        <!-- BUSCADOR / SELECTOR DE LOCALIDAD PRECARGADA DESDE EL GEOJSON -->
+        <div class="form-group">
+          <label style="color: #2563eb;">🔍 Filtrar por Localidad (NOMLOCCAT):</label>
+          <select id="selectLocalidadGeoJSON" disabled onchange="alCambiarLocalidad()">
+            <option value="">-- Primero cargue el GeoJSON --</option>
+          </select>
+          <div id="statusLocalidadSel" class="status-indicator">Localidades disponibles: 0</div>
+        </div>
+
+        <div class="form-group">
+          <label>GeoJSON Departamentos (deptos):</label>
+          <input type="file" id="inputDeptos" accept=".geojson,.json" disabled readonly onchange="cargarDeptos(event)">
+          <div id="statusDeptos" class="status-indicator">Deptos: Carga inhabilitada</div>
+        </div>
+
+        <div class="form-group">
+          <label>GeoJSON Localidades (loc_ine_23):</label>
+          <input type="file" id="inputLocINE" accept=".geojson,.json" disabled readonly onchange="cargarLocINE(event)">
+          <div id="statusLocINE" class="status-indicator">Loc INE 23: Carga inhabilitada</div>
+        </div>
+
+        <div class="form-group">
+          <label>JSON Puntos a Validar:</label>
+          <input type="file" id="inputJSONPuntos" accept=".json" onchange="cargarPuntosJSON(event)">
+          <div id="statusPuntos" class="status-indicator">Puntos cargados: 0</div>
+          <button type="button" class="btn-danger" style="margin-top: 6px;" onclick="limpiarPuntosCargados()">
+            🗑️ Limpiar Datos Cargados
+          </button>
+        </div>
+
+        <!-- Sección para la carga independiente de KML / KMZ -->
+        <div class="form-group" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+          <label>Cargar Archivo KML / KMZ:</label>
+          <input type="file" id="inputKML" accept=".kml,.kmz">
+          <button type="button" class="btn-kml" style="margin-top: 6px;" onclick="cargarYMostrarKML()">
+            📍 Cargar y Mostrar KML/KMZ
+          </button>
+          <div id="statusKML" class="status-indicator">KML/KMZ: No cargado</div>
+        </div>
+      </div>
+
+      <hr style="border:0; border-top: 1px solid #e2e8f0;">
+
+      <div>
+        <div class="section-title">2. Ingreso Manual</div>
+        <div class="row-inputs">
+          <div class="form-group">
+            <label>ID Simple:</label>
+            <input type="text" id="inputIdSimple" placeholder="Ej: 18955">
+          </div>
+          <div class="form-group">
+            <label>Nombre / Establecimiento:</label>
+            <input type="text" id="inputNombre" placeholder="Ej: Establecimiento A">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dirección:</label>
+          <input type="text" id="inputDireccion" placeholder="Ej: Av. Italia 1234">
+        </div>
+        <div class="row-inputs">
+          <div class="form-group">
+            <label>Localidad:</label>
+            <input type="text" id="inputLocalidad" placeholder="Ej: Las Piedras">
+          </div>
+          <div class="form-group">
+            <label>Departamento:</label>
+            <input type="text" id="inputDepto" placeholder="Ej: Canelones">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Padrón(es):</label>
+          <input type="text" id="inputPadrones" placeholder="Ej: 1234, 5678">
+        </div>
+        <div class="row-inputs">
+          <div class="form-group">
+            <label>Latitud (Y):</label>
+            <input type="number" id="inputLat" step="any" placeholder="-34.8097">
+          </div>
+          <div class="form-group">
+            <label>Longitud (X):</label>
+            <input type="number" id="inputLng" step="any" placeholder="-56.1800">
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 6px; margin-top: 4px;">
+          <button type="button" class="btn-primary" onclick="agregarManual()" style="flex: 1;">
+            Agregar Punto
+          </button>
+          <button type="button" class="btn-secondary" onclick="buscarDireccionManual()" title="Buscar ubicación de la dirección escrita">
+            Buscar Dirección
+          </button>
+        </div>
+      </div>
+
+      <hr style="border:0; border-top: 1px solid #e2e8f0;">
+
+      <div>
+        <div class="section-title">3. Acciones de Capa</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button id="btnValidar" class="btn-success" onclick="ejecutarValidacionCompuesta()">
+            Ejecutar Validación
+          </button>
+          <button id="btnMostrarTodo" class="btn-outline" onclick="toggleMostrarTodo()">
+            👁️ Mostrar Todos los Padrones a este Zoom
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Leyenda del Mapa</div>
+        <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; margin-bottom: 12px;">
+          <div class="legend-item"><span class="legend-color" style="background: #22c55e;"></span> Coordenada en Padrón Declarado</div>
+          <div class="legend-item"><span class="legend-color" style="background: #22c55e;"></span> Padrón Declarado a ≤ 500 m de la coordenada</div>
+          <div class="legend-item"><span class="legend-color" style="background: #f97316;"></span> Padrón Declarado a más de 500 m de la coordenada</div>
+          <div class="legend-item"><span class="legend-color" style="background: #ef4444;"></span> Coordenada fuera de Padrón Declarado</div>
+          <div class="legend-item"><span class="legend-color" style="background: #8b5cf6;"></span> Dirección Geocodificada / Capa KML</div>
+          <div class="legend-item"><span class="legend-color" style="background: #3b82f6;"></span> Línea de Conexión (Desplazamiento)</div>
+          <div class="legend-item"><span class="legend-color" style="background: #94a3b8;"></span> Padrón Contextual (Sin Punto Evaluado)</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Links de Consulta</div>
+        <div class="consult-links-container">
+          <a href="http://visor.catastro.gub.uy/VisorDNC" target="_blank" rel="noopener noreferrer" class="btn-consult-link">
+            <span>🌐 Geocatastro (DNC)</span>
+            <span>↗</span>
+          </a>
+          <a href="https://montevideo.gub.uy/app/mapas/#/viewer/26" target="_blank" rel="noopener noreferrer" class="btn-consult-link">
+            <span>🏛️ Visor Intendencia de Montevideo</span>
+            <span>↗</span>
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Resultados</div>
+        <div id="results">
+          <div style="color: #94a3b8; font-size: 0.8rem; font-style: italic;">
+            Cargue los archivos e indique la localidad para comenzar la validación.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Librerías JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js"></script>
+
+  <script>
+    const MIN_ZOOM_PADRONES = 13;
+
+    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri'
+    });
+    const cartoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
+    const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+
+    const map = L.map('map', {
+      center: [-32.8755, -56.0202],
+      zoom: 7,
+      preferCanvas: true,
+      layers: [esriSatellite, cartoLabels]
+    });
+
+    let rawGeoJSON = null;
+    let geojsonDeptos = null;
+    let geojsonLocINE = null;
+
+    let bboxesFeatures = []; 
+    let bboxesDeptos = [];
+    let bboxesLocINE = [];
+
+    let geojsonLayer = null;
+    let listaPuntos = [];
+    let currentStatusMap = {};
+    let indicesPoligonosAfectados = new Set();
+    let validacionActiva = false;
+    let modoMostrarTodo = false;
+    
+    // Las capas administrativas de referencia se cargan por defecto en el mapa.
+    const deptosLayerGroup = L.layerGroup().addTo(map);
+    const locINELayerGroup = L.layerGroup().addTo(map);
+    const kmlLayerGroup = L.layerGroup().addTo(map);
+
+    const markersGroup = L.layerGroup().addTo(map);
+    const addressMarkersGroup = L.layerGroup().addTo(map);
+    const connectionLinesGroup = L.layerGroup().addTo(map);
+    const padronLabelsGroup = L.layerGroup().addTo(map);
+
+    L.control.layers({
+      "Satelital (Esri)": L.layerGroup([esriSatellite, cartoLabels]),
+      "Mapa Callejero (OSM)": openStreetMap
+    }, {
+      "Puntos Coordenadas": markersGroup,
+      "Puntos Direcciones (Violeta)": addressMarkersGroup,
+      "Líneas Distancia": connectionLinesGroup,
+      "Capa KML/KMZ": kmlLayerGroup,
+      "Capa Departamentos": deptosLayerGroup,
+      "Capa Localidades INE": locINELayerGroup
+    }, { position: 'topright' }).addTo(map);
+
+    async function precargarCapasBaseLocales() {
+      try {
+        const respDeptos = await fetch('deptos.geojson');
+        if (respDeptos.ok) {
+          geojsonDeptos = await respDeptos.json();
+          bboxesDeptos = geojsonDeptos.features.map(f => turf.bbox(f));
+          L.geoJSON(geojsonDeptos, {
+            style: { color: "#3b82f6", weight: 1.5, fillOpacity: 0.05 },
+            onEachFeature: function(feature, layer) {
+              const props = feature.properties || {};
+              const nomDepto = props.NOMDEPTO || props.nomdepto || props.Nomdepto || props.DEPARTAMENTO || props.departamento || "No informado";
+              layer.bindPopup(`<b>Departamento:</b> ${nomDepto}`);
+            }
+          }).addTo(deptosLayerGroup);
+          actualizarIndicadores();
+        }
+      } catch (err) {}
+
+      try {
+        const respLoc = await fetch('loc_ine_23.geojson');
+        if (respLoc.ok) {
+          geojsonLocINE = await respLoc.json();
+          bboxesLocINE = geojsonLocINE.features.map(f => turf.bbox(f));
+          L.geoJSON(geojsonLocINE, {
+            style: { color: "#10b981", weight: 1, fillOpacity: 0.05 },
+            onEachFeature: function(feature, layer) {
+              const props = feature.properties || {};
+              const nomDepto = props.NOMDEPTO || props.nomdepto || props.Nomdepto || props.DEPARTAMENTO || props.departamento || "No informado";
+              const nomLoc = props.NOMLOCCAT || props.nomloccat || props.Nomloccat || props.NOM_LOC || props.NOMLOC || props.LOCALIDAD || props.localidad || "No informado";
+              layer.bindPopup(`<b>Departamento:</b> ${nomDepto}<br><b>Localidad:</b> ${nomLoc}`);
+            }
+          }).addTo(locINELayerGroup);
+          actualizarIndicadores();
+        }
+      } catch (err) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', precargarCapasBaseLocales);
+
+    function cleanStr(str) {
+      if (!str) return "";
+      return str.toString().trim().toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function cleanPadron(padron) {
+      if (!padron) return "";
+      return padron.toString().trim().replace(/^0+/, "");
+    }
+
+    // Identificador único: Departamento + Padrón + Localidad.
+    function crearIdPadron(depto, padron, localidad) {
+      return [cleanStr(depto), cleanPadron(padron), cleanStr(localidad)].join("|");
+    }
+
+    // Soporta el JSON importado (coordenada_x / coordenada_y) y el ingreso manual.
+    function obtenerCoordenadasPunto(p) {
+      return {
+        lat: parseFloat(p.coordenada_y ?? p.latitud ?? p.lat ?? p.y ?? p.Y),
+        lng: parseFloat(p.coordenada_x ?? p.longitud ?? p.lng ?? p.lon ?? p.x ?? p.X)
+      };
+    }
+
+    function obtenerDatosPunto(p) {
+      return {
+        departamento: p.departamento || p.depto || p.DEPARTAMENTO || p.NOMDEPTO || "",
+        localidad: p.localidad || p.LOCALIDAD || p.NOMLOCCAT || "",
+        padrones: p.padron || p.padrones || p.Padron || p.PADRON || ""
+      };
+    }
+
+    // Determina la ubicación administrativa REAL del punto usando exclusivamente
+    // las capas base cargadas (deptos.geojson y loc_ine_23.geojson).
+    // No utiliza los valores declarados por el JSON para esta determinación.
+    function obtenerUbicacionAdministrativaBase(lat, lng) {
+      const resultado = {
+        departamento: "",
+        localidad: ""
+      };
+
+      if (isNaN(lat) || isNaN(lng)) return resultado;
+
+      const punto = turf.point([lng, lat]);
+
+      // Departamento real según la capa deptos.
+      if (geojsonDeptos && geojsonDeptos.features) {
+        for (const feature of geojsonDeptos.features) {
+          const bbox = turf.bbox(feature);
+          if (lng < bbox[0] || lng > bbox[2] || lat < bbox[1] || lat > bbox[3]) continue;
+          try {
+            if (turf.booleanPointInPolygon(punto, feature)) {
+              const props = feature.properties || {};
+              resultado.departamento = props.NOMDEPTO || props.nomdepto || props.Nomdepto ||
+                props.DEPARTAMENTO || props.departamento || "";
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+
+      // Localidad real según la capa localidad_ine_23.
+      if (geojsonLocINE && geojsonLocINE.features) {
+        for (const feature of geojsonLocINE.features) {
+          const bbox = turf.bbox(feature);
+          if (lng < bbox[0] || lng > bbox[2] || lat < bbox[1] || lat > bbox[3]) continue;
+          try {
+            if (turf.booleanPointInPolygon(punto, feature)) {
+              const props = feature.properties || {};
+              resultado.localidad = props.NOMLOCCAT || props.nomloccat || props.Nomloccat ||
+                props.NOM_LOC || props.NOMLOC || props.LOCALIDAD || props.localidad || "";
+
+              // Si la capa de localidades también tiene NOMDEPTO, se prioriza ese
+              // valor como departamento administrativo de la capa base.
+              const deptoLoc = props.NOMDEPTO || props.nomdepto || props.Nomdepto ||
+                props.DEPARTAMENTO || props.departamento || "";
+              if (deptoLoc) resultado.departamento = deptoLoc;
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+
+      return resultado;
+    }
+
+    function parsePadronesList(padronesInput) {
+      if (!padronesInput) return [];
+      if (Array.isArray(padronesInput)) {
+        return padronesInput.map(p => cleanPadron(p)).filter(p => p.length > 0);
+      }
+      return padronesInput.toString()
+        .replace(/["']/g, "")
+        .split(/[,;\s]+/)
+        .map(p => cleanPadron(p))
+        .filter(p => p.length > 0);
+    }
+
+    function getGeoJSONProps(props) {
+      if (!props) return { padron: "", nomdepto: "", nomloccat: "" };
+      return {
+        padron: props.PADRON || props.padron || props.Padron || props.PADRON_ID || props.padron_id || "",
+        nomdepto: props.NOMDEPTO || props.nomdepto || props.Departamento || props.DEPARTAMENTO || props.depto || props.DEPTO || "",
+        nomloccat: props.NOMLOCCAT || props.nomloccat || props.Nomloccat || props.NOM_LOC || props.NOMLOC || props.localidad || ""
+      };
+    }
+
+    function actualizarIndicadores() {
+      const statusGeoJSON = document.getElementById('statusGeoJSON');
+      const statusPuntos = document.getElementById('statusPuntos');
+
+      if (rawGeoJSON && rawGeoJSON.features) {
+        statusGeoJSON.innerHTML = `GeoJSON Padrones: <b>${rawGeoJSON.features.length} polígonos</b>`;
+        statusGeoJSON.style.color = "#16a34a";
+      } else {
+        statusGeoJSON.innerHTML = "GeoJSON: No cargado";
+        statusGeoJSON.style.color = "#dc2626";
+      }
+
+      statusPuntos.innerHTML = `Puntos cargados: <b>${listaPuntos.length}</b>`;
+    }
+
+    /* CARGA Y EXTRACCIÓN DE LOCALIDADES (NOMLOCCAT) */
+    function cargarGeoJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          rawGeoJSON = JSON.parse(evt.target.result);
+          bboxesFeatures = rawGeoJSON.features.map(f => turf.bbox(f));
+          
+          poblarSelectorLocalidades();
+          actualizarIndicadores();
+          limpiarCapaGeoJSON();
+          validacionActiva = false;
+        } catch(err) {
+          alert("Error al cargar el archivo GeoJSON de padrones.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function poblarSelectorLocalidades() {
+      const select = document.getElementById('selectLocalidadGeoJSON');
+      const statusLoc = document.getElementById('statusLocalidadSel');
+      select.innerHTML = '';
+
+      if (!rawGeoJSON || !rawGeoJSON.features) {
+        select.disabled = true;
+        select.innerHTML = '<option value="">-- No hay GeoJSON cargado --</option>';
+        statusLoc.innerHTML = 'Localidades disponibles: 0';
+        return;
+      }
+
+      const localidadesSet = new Set();
+      rawGeoJSON.features.forEach(f => {
+        const props = getGeoJSONProps(f.properties);
+        if (props.nomloccat) {
+          localidadesSet.add(props.nomloccat.toString().trim());
+        }
+      });
+
+      const localidades = Array.from(localidadesSet).sort((a, b) => a.localeCompare(b));
+
+      if (localidades.length === 0) {
+        select.disabled = true;
+        select.innerHTML = '<option value="">-- No se encontró el campo NOMLOCCAT --</option>';
+        statusLoc.innerHTML = 'Campo NOMLOCCAT no hallado';
+        statusLoc.style.color = "#dc2626";
+        return;
+      }
+
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = "";
+      defaultOpt.textContent = `-- Seleccione Localidad (${localidades.length} halladas) --`;
+      select.appendChild(defaultOpt);
+
+      localidades.forEach(loc => {
+        const opt = document.createElement('option');
+        opt.value = loc;
+        opt.textContent = loc;
+        select.appendChild(opt);
+      });
+
+      select.disabled = false;
+      statusLoc.innerHTML = `Localidades extraídas: <b>${localidades.length}</b>`;
+      statusLoc.style.color = "#16a34a";
+    }
+
+    function alCambiarLocalidad() {
+      const selectedLoc = document.getElementById('selectLocalidadGeoJSON').value;
+      if (!selectedLoc || !rawGeoJSON) return;
+
+      // Hacer un encuadre visual a los padrones de la localidad seleccionada
+      const featuresLocalidad = rawGeoJSON.features.filter(f => {
+        const props = getGeoJSONProps(f.properties);
+        return cleanStr(props.nomloccat) === cleanStr(selectedLoc);
+      });
+
+      if (featuresLocalidad.length > 0) {
+        const bboxGroup = turf.bbox({ type: "FeatureCollection", features: featuresLocalidad });
+        map.fitBounds([[bboxGroup[1], bboxGroup[0]], [bboxGroup[3], bboxGroup[2]]], { padding: [30, 30] });
+      }
+
+      if (validacionActiva) {
+        ejecutarValidacionCompuesta();
+      }
+    }
+
+    /* CARGA Y NAVEGACIÓN KML / KMZ */
+    async function cargarYMostrarKML() {
+      const input = document.getElementById('inputKML');
+      const file = input.files[0];
+      const statusKML = document.getElementById('statusKML');
+
+      if (!file) {
+        alert("Seleccione un archivo .kml o .kmz primero.");
+        return;
+      }
+
+      statusKML.innerHTML = "Procesando archivo...";
+      statusKML.style.color = "#0284c7";
+
+      try {
+        let kmlString = "";
+        if (file.name.toLowerCase().endsWith('.kmz')) {
+          const zip = await JSZip.loadAsync(file);
+          const kmlFile = Object.keys(zip.files).find(name => name.toLowerCase().endsWith('.kml'));
+          if (!kmlFile) throw new Error("KMZ sin archivo .kml interno.");
+          kmlString = await zip.files[kmlFile].async("string");
+        } else {
+          kmlString = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = e => reject(e);
+            reader.readAsText(file);
+          });
+        }
+
+        const parser = new DOMParser();
+        const kmlDom = parser.parseFromString(kmlString, "text/xml");
+        const geojsonConverted = toGeoJSON.kml(kmlDom);
+
+        if (!geojsonConverted || !geojsonConverted.features || geojsonConverted.features.length === 0) {
+          throw new Error("Sin datos vectoriales legibles en el KML.");
+        }
+
+        kmlLayerGroup.clearLayers();
+        const layerKml = L.geoJSON(geojsonConverted, {
+          style: { color: "#8b5cf6", weight: 3, fillColor: "#a855f7", fillOpacity: 0.3 },
+          pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+            radius: 7, fillColor: "#8b5cf6", color: "#ffffff", weight: 2, fillOpacity: 0.9
+          })
+        }).addTo(kmlLayerGroup);
+
+        const bounds = layerKml.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40] });
+
+        statusKML.innerHTML = `KML/KMZ: <b>${geojsonConverted.features.length} elementos</b>`;
+        statusKML.style.color = "#16a34a";
+      } catch (err) {
+        alert("Error KML: " + err.message);
+        statusKML.innerHTML = "Error al procesar KML/KMZ";
+        statusKML.style.color = "#dc2626";
+      }
+    }
+
+    function cargarPuntosJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = JSON.parse(evt.target.result);
+          listaPuntos = Array.isArray(data) ? data : [data];
+          actualizarIndicadores();
+          dibujarPuntosEnMapa();
+        } catch (err) {
+          alert("Error al cargar el archivo JSON de puntos.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function dibujarPuntosEnMapa() {
+      markersGroup.clearLayers();
+      if (listaPuntos.length === 0) return;
+
+      const bounds = [];
+      listaPuntos.forEach((p, idx) => {
+        const { lat, lng } = obtenerCoordenadasPunto(p);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          bounds.push([lat, lng]);
+          const marker = L.circleMarker([lat, lng], {
+            radius: 7,
+            fillColor: "#3b82f6",
+            color: "#ffffff",
+            weight: 2,
+            fillOpacity: 0.9
+          }).addTo(markersGroup);
+
+          const id = p.id_simple || p.id || idx + 1;
+          const nom = p.nombre || p.establecimiento || "Punto " + id;
+          marker.bindPopup(`<b>ID:</b> ${id}<br><b>Establecimiento:</b> ${nom}`);
+        }
+      });
+
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }
+
+    function agregarManual() {
+      const idSimple = document.getElementById('inputIdSimple').value;
+      const nombre = document.getElementById('inputNombre').value;
+      const direccion = document.getElementById('inputDireccion').value;
+      const localidad = document.getElementById('inputLocalidad').value;
+      const depto = document.getElementById('inputDepto').value;
+      const padrones = document.getElementById('inputPadrones').value;
+      const lat = parseFloat(document.getElementById('inputLat').value);
+      const lng = parseFloat(document.getElementById('inputLng').value);
+
+      if (isNaN(lat) || isNaN(lng)) {
+        alert("Ingrese coordenadas válidas de Latitud y Longitud.");
+        return;
+      }
+
+      const nuevoPunto = {
+        id_simple: idSimple || (listaPuntos.length + 1).toString(),
+        nombre: nombre || "Ingreso Manual",
+        direccion: direccion,
+        localidad: localidad,
+        departamento: depto,
+        padron: padrones,
+        latitud: lat,
+        longitud: lng
+      };
+
+      listaPuntos.push(nuevoPunto);
+      actualizarIndicadores();
+      dibujarPuntosEnMapa();
+
+      // Limpiar campos del formulario
+      document.getElementById('inputIdSimple').value = '';
+      document.getElementById('inputNombre').value = '';
+      document.getElementById('inputDireccion').value = '';
+      document.getElementById('inputPadrones').value = '';
+      document.getElementById('inputLat').value = '';
+      document.getElementById('inputLng').value = '';
+    }
+
+    async function buscarDireccionManual() {
+      const direccion = document.getElementById('inputDireccion').value;
+      const localidad = document.getElementById('inputLocalidad').value;
+      const depto = document.getElementById('inputDepto').value;
+
+      if (!direccion) {
+        alert("Ingrese una dirección para realizar la búsqueda.");
+        return;
+      }
+
+      const res = await geocodificarDireccion(direccion, localidad, depto);
+      if (res) {
+        document.getElementById('inputLat').value = res.lat;
+        document.getElementById('inputLng').value = res.lng;
+
+        addressMarkersGroup.clearLayers();
+        const marker = L.circleMarker([res.lat, res.lng], {
+          radius: 8, fillColor: "#8b5cf6", color: "#ffffff", weight: 2, fillOpacity: 0.95
+        }).addTo(addressMarkersGroup);
+
+        marker.bindPopup(`<b>Dirección Geocodificada:</b><br>${res.display_name}`).openPopup();
+        map.setView([res.lat, res.lng], 16);
+      } else {
+        alert("No se encontró la dirección ingresada.");
+      }
+    }
+
+    async function geocodificarDireccion(direccion, localidad = "", depto = "") {
+      const query = [direccion, localidad, depto].filter(t => t && t.trim().length > 0).join(", ");
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data && data.length > 0) {
+          return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), display_name: data[0].display_name };
+        }
+      } catch (err) {}
+      return null;
+    }
+
+
+    // Caché para no repetir geocodificaciones de la misma dirección.
+    const cacheGeocodificacion = new Map();
+    let ultimoRequestNominatim = 0;
+
+    async function geocodificarDireccionDeclarada(direccion, localidad = "", depto = "") {
+      const query = [direccion, localidad, depto]
+        .filter(t => t && t.toString().trim().length > 0)
+        .join(", ");
+
+      if (!query) return null;
+      const cacheKey = cleanStr(query);
+      if (cacheGeocodificacion.has(cacheKey)) return cacheGeocodificacion.get(cacheKey);
+
+      // Respetar aproximadamente 1 solicitud/segundo a Nominatim.
+      const ahora = Date.now();
+      const espera = Math.max(0, 1000 - (ahora - ultimoRequestNominatim));
+      if (espera > 0) await new Promise(resolve => setTimeout(resolve, espera));
+      ultimoRequestNominatim = Date.now();
+
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=uy&q=${encodeURIComponent(query)}`;
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (data && data.length > 0) {
+          const resultado = {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+            display_name: data[0].display_name || query
+          };
+          cacheGeocodificacion.set(cacheKey, resultado);
+          return resultado;
+        }
+      } catch (err) {
+        console.warn("No se pudo geocodificar la dirección:", query, err);
+      }
+      cacheGeocodificacion.set(cacheKey, null);
+      return null;
+    }
+
+    function limpiarPuntosCargados() {
+      listaPuntos = [];
+      markersGroup.clearLayers();
+      addressMarkersGroup.clearLayers();
+      connectionLinesGroup.clearLayers();
+      limpiarCapaGeoJSON();
+
+      currentStatusMap = {};
+      indicesPoligonosAfectados.clear();
+      validacionActiva = false;
+
+      document.getElementById('inputJSONPuntos').value = '';
+      document.getElementById('results').innerHTML = '<div style="color: #94a3b8; font-size: 0.8rem; font-style: italic;">Cargue los archivos e indique la localidad para comenzar la validación.</div>';
+      actualizarIndicadores();
+    }
+
+    function toggleMostrarTodo() {
+      if (!rawGeoJSON || !rawGeoJSON.features) {
+        alert("Cargue un archivo GeoJSON primero.");
+        return;
+      }
+
+      modoMostrarTodo = !modoMostrarTodo;
+      const btn = document.getElementById('btnMostrarTodo');
+
+      if (modoMostrarTodo) {
+        btn.classList.add('active');
+        btn.innerHTML = '👁️ Ocultar Padrones Extra';
+        if (map.getZoom() < MIN_ZOOM_PADRONES) {
+          alert(`Acerque el mapa (Zoom mínimo ${MIN_ZOOM_PADRONES}) para visualizar los padrones.`);
+        }
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '👁️ Mostrar Todos los Padrones a este Zoom';
+      }
+
+      renderGeoJSONVisible();
+    }
+
+    function limpiarCapaGeoJSON() {
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
+        geojsonLayer = null;
+      }
+      padronLabelsGroup.clearLayers();
+    }
+
+    function renderGeoJSONVisible() {
+      if ((!validacionActiva && !modoMostrarTodo) || !rawGeoJSON || !rawGeoJSON.features) {
+        limpiarCapaGeoJSON();
+        return;
+      }
+
+      limpiarCapaGeoJSON();
+
+      if (map.getZoom() < MIN_ZOOM_PADRONES) return;
+
+      const mapBounds = map.getBounds();
+      const minX = mapBounds.getWest() - 0.005;
+      const minY = mapBounds.getSouth() - 0.005;
+      const maxX = mapBounds.getEast() + 0.005;
+      const maxY = mapBounds.getNorth() + 0.005;
+
+      const selectedLoc = cleanStr(document.getElementById('selectLocalidadGeoJSON').value);
+      const featuresParaRenderizar = [];
+
+      if (modoMostrarTodo) {
+        for (let i = 0; i < rawGeoJSON.features.length; i++) {
+          const feat = rawGeoJSON.features[i];
+          const props = getGeoJSONProps(feat.properties);
+
+          // Si hay localidad seleccionada, renderizar preferentemente los de esa localidad
+          if (selectedLoc && cleanStr(props.nomloccat) !== selectedLoc) continue;
+
+          const bbox = bboxesFeatures[i];
+          if (!(bbox[0] > maxX || bbox[2] < minX || bbox[1] > maxY || bbox[3] < minY)) {
+            featuresParaRenderizar.push(feat);
+          }
+        }
+      } else {
+        indicesPoligonosAfectados.forEach(idx => {
+          const feat = rawGeoJSON.features[idx];
+          if (!feat) return;
+
+          const bbox = bboxesFeatures[idx];
+          if (!(bbox[0] > maxX || bbox[2] < minX || bbox[1] > maxY || bbox[3] < minY)) {
+            featuresParaRenderizar.push(feat);
+          }
+        });
+      }
+
+      if (featuresParaRenderizar.length === 0) return;
+
+      geojsonLayer = L.geoJSON({
+        type: "FeatureCollection",
+        features: featuresParaRenderizar
+      }, {
+        style: function(feature) {
+          const indexOriginal = rawGeoJSON.features.indexOf(feature);
+          const status = currentStatusMap[indexOriginal];
+
+          let color = "#94a3b8";
+          let fillOpacity = 0.2;
+
+          if (status === 'match') {
+            color = "#22c55e";
+            fillOpacity = 0.5;
+          } else if (status === 'declared_far') {
+            color = "#f97316";
+            fillOpacity = 0.5;
+          } else if (status === 'declared_only') {
+            color = "#3b82f6";
+            fillOpacity = 0.4;
+          } else if (status === 'mismatch_point') {
+            color = "#ef4444";
+            fillOpacity = 0.4;
+          }
+
+          return {
+            color: color,
+            weight: 2,
+            fillColor: color,
+            fillOpacity: fillOpacity
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          const p = getGeoJSONProps(feature.properties);
+          layer.bindPopup(`<b>Padrón Real:</b> ${p.padron}<br><b>Localidad (NOMLOCCAT):</b> ${p.nomloccat}<br><b>Departamento:</b> ${p.nomdepto}`);
+        }
+      }).addTo(map);
+
+      // Etiquetas de padrón: se colocan en el centroide y se evita mostrar
+      // etiquetas que se solapen entre sí en la pantalla.
+      if (validacionActiva) {
+        const ocupados = [];
+        const zoom = map.getZoom();
+
+        featuresParaRenderizar.forEach(feature => {
+          const props = getGeoJSONProps(feature.properties);
+          const padron = cleanPadron(props.padron);
+          if (!padron) return;
+
+          try {
+            const centroide = turf.centroid(feature);
+            const coords = centroide.geometry.coordinates;
+            const puntoPantalla = map.latLngToContainerPoint([coords[1], coords[0]]);
+
+            // Ancho aproximado de la etiqueta según cantidad de caracteres.
+            const ancho = Math.max(28, padron.length * 7 + 12);
+            const alto = 18;
+            const rect = {
+              left: puntoPantalla.x - ancho / 2,
+              right: puntoPantalla.x + ancho / 2,
+              top: puntoPantalla.y - alto / 2,
+              bottom: puntoPantalla.y + alto / 2
+            };
+
+            // Si el centroide queda fuera de la vista, no crear etiqueta.
+            const size = map.getSize();
+            if (puntoPantalla.x < -ancho || puntoPantalla.x > size.x + ancho ||
+                puntoPantalla.y < -alto || puntoPantalla.y > size.y + alto) return;
+
+            const seSolapa = ocupados.some(r => !(rect.right < r.left || rect.left > r.right || rect.bottom < r.top || rect.top > r.bottom));
+            if (seSolapa) return;
+
+            ocupados.push(rect);
+
+            L.marker([coords[1], coords[0]], {
+              icon: L.divIcon({
+                className: 'padron-label',
+                html: padron,
+                iconSize: [ancho, alto],
+                iconAnchor: [ancho / 2, alto / 2]
+              }),
+              interactive: false,
+              keyboard: false
+            }).addTo(padronLabelsGroup);
+          } catch (err) {
+            // Algunas geometrías inválidas pueden no permitir calcular el centroide.
+          }
+        });
+      }
+    }
+
+    map.on('moveend zoomend', () => {
+      if (validacionActiva || modoMostrarTodo) renderGeoJSONVisible();
+    });
+
+    /* VALIDACIÓN: primero se filtra el GeoJSON por la localidad seleccionada
+       y recién después se comparan los padrones del campo "padrones" del JSON. */
+    // Distancia mínima desde una coordenada al polígono del padrón declarado.
+    // Si la coordenada está dentro del polígono, la distancia es 0.
+    function distanciaPuntoAPoligono(pointTurf, feature) {
+      try {
+        if (!feature) return Infinity;
+
+        // Si está dentro, se considera coincidencia espacial inmediata.
+        if (turf.booleanPointInPolygon(pointTurf, feature)) return 0;
+
+        const lineaPoligono = turf.polygonToLine(feature);
+        const cercano = turf.nearestPointOnLine(lineaPoligono, pointTurf, {
+          units: 'meters'
+        });
+
+        return cercano && cercano.properties && typeof cercano.properties.dist === 'number'
+          ? cercano.properties.dist
+          : Infinity;
+      } catch (err) {
+        console.warn('No se pudo calcular la distancia al padrón:', err);
+        return Infinity;
+      }
+    }
+
+    function obtenerDistanciaMinimaPadronesDeclarados(listaPadronesDeclarados, mapaPadronesLoc, pointTurf) {
+      let distanciaMinima = Infinity;
+      let padronMasCercano = null;
+
+      listaPadronesDeclarados.forEach(padron => {
+        const elementos = mapaPadronesLoc.get(padron) || [];
+
+        elementos.forEach(item => {
+          const distancia = distanciaPuntoAPoligono(pointTurf, item.feature);
+
+          if (distancia < distanciaMinima) {
+            distanciaMinima = distancia;
+            padronMasCercano = padron;
+          }
+        });
+      });
+
+      return { distanciaMinima, padronMasCercano };
+    }
+
+    async function ejecutarValidacionCompuesta() {
+      if (!rawGeoJSON || !rawGeoJSON.features) {
+        alert("Cargue el archivo GeoJSON de padrones reales.");
+        return;
+      }
+
+      const selectLocalidad = document.getElementById('selectLocalidadGeoJSON');
+      const localidadSeleccionada = selectLocalidad.value;
+
+      if (!localidadSeleccionada) {
+        alert("Seleccione una localidad antes de ejecutar la validación.");
+        selectLocalidad.focus();
+        return;
+      }
+
+      if (listaPuntos.length === 0) {
+        alert("Cargue o ingrese al menos un punto para validar.");
+        return;
+      }
+
+      const btn = document.getElementById('btnValidar');
+      const textoOriginal = btn.innerHTML;
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.innerHTML = '⏳ Validando...';
+
+      try {
+        const locSelLimpia = cleanStr(localidadSeleccionada);
+
+        // ============================================================
+        // PASO 1: FILTRAR PRIMERO EL GEOJSON POR NOMLOCCAT.
+        // Desde este momento, SOLO estos polígonos participan en la
+        // comparación de padrones. No usamos la localidad del JSON
+        // para decidir si un padrón pertenece o no al filtro.
+        // ============================================================
+        const indicesLocalidadGeoJSON = [];
+        const mapaPadronesLoc = new Map();
+
+        rawGeoJSON.features.forEach((feat, idx) => {
+          const props = getGeoJSONProps(feat.properties);
+          if (cleanStr(props.nomloccat) !== locSelLimpia) return;
+
+          indicesLocalidadGeoJSON.push(idx);
+          const padron = cleanPadron(props.padron);
+          if (!padron) return;
+
+          if (!mapaPadronesLoc.has(padron)) mapaPadronesLoc.set(padron, []);
+          mapaPadronesLoc.get(padron).push({
+            feature: feat,
+            index: idx,
+            props: props
+          });
+        });
+
+        if (indicesLocalidadGeoJSON.length === 0) {
+          alert(`No se encontraron polígonos en la localidad "${localidadSeleccionada}".`);
+          return;
+        }
+
+        currentStatusMap = {};
+        indicesPoligonosAfectados.clear();
+        connectionLinesGroup.clearLayers();
+        addressMarkersGroup.clearLayers();
+
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+
+        // Mostrar el universo real utilizado en la comparación.
+        const resumenFiltro = document.createElement('div');
+        resumenFiltro.className = 'card-section';
+        resumenFiltro.innerHTML = `
+          <div class="card-section-title">Filtro aplicado antes de comparar</div>
+          <div><b>Localidad GeoJSON:</b> ${localidadSeleccionada}</div>
+          <div><b>Polígonos de esta localidad:</b> ${indicesLocalidadGeoJSON.length.toLocaleString('es-UY')}</div>
+          <div><b>Padrones únicos encontrados:</b> ${mapaPadronesLoc.size.toLocaleString('es-UY')}</div>
+        `;
+        resultsDiv.appendChild(resumenFiltro);
+
+        let procesados = 0;
+        let conCoordenada = 0;
+        let coincidencias = 0;
+
+        for (let i = 0; i < listaPuntos.length; i++) {
+          const p = listaPuntos[i];
+          const { lat, lng } = obtenerCoordenadasPunto(p);
+          const datosPunto = obtenerDatosPunto(p);
+          const listaPadronesDeclarados = parsePadronesList(datosPunto.padrones);
+
+          procesados++;
+
+          const card = document.createElement('div');
+          const idPunto = p.id_simple || p.id || (i + 1);
+          const nombrePunto = p.nombre_establecimiento || p.nombre || p.establecimiento || 'Establecimiento';
+          const direccion = p.direccion || '';
+
+          if (isNaN(lat) || isNaN(lng)) {
+            card.className = 'result-card not-found';
+            card.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <b>ID: ${idPunto} - ${nombrePunto}</b>
+                <span class="badge badge-warn">⚠️ SIN COORDENADA</span>
+              </div>
+              <div style="margin-top:6px;"><b>Localidad seleccionada:</b> ${localidadSeleccionada}</div>
+              <div><b>Padrones declarados:</b> ${listaPadronesDeclarados.join(', ') || '<i>Ninguno</i>'}</div>
+              <div style="margin-top:6px;color:#b45309;">No se pudo realizar el análisis espacial porque el JSON no contiene coordenadas válidas.</div>
+            `;
+            resultsDiv.appendChild(card);
+            continue;
+          }
+
+          conCoordenada++;
+          const pointTurf = turf.point([lng, lat]);
+
+          // Ubicación administrativa REAL de la coordenada según las capas base.
+          // Esto es independiente del departamento/localidad declarados en el JSON
+          // y también funciona para puntos ingresados manualmente.
+          const ubicacionBase = obtenerUbicacionAdministrativaBase(lat, lng);
+
+          // ============================================================
+          // PASO 2: ENCONTRAR EL PADRÓN DONDE CAE LA COORDENADA,
+          // PERO SOLAMENTE ENTRE LOS POLÍGONOS YA FILTRADOS.
+          // ============================================================
+          let padronDondeCaePunto = null;
+          let indexPoligonoCoordenada = -1;
+          let propsPoligonoCoordenada = null;
+
+          for (const idxGeom of indicesLocalidadGeoJSON) {
+            const bbox = bboxesFeatures[idxGeom];
+            if (!bbox) continue;
+
+            if (lng >= bbox[0] && lat >= bbox[1] && lng <= bbox[2] && lat <= bbox[3]) {
+              if (turf.booleanPointInPolygon(pointTurf, rawGeoJSON.features[idxGeom])) {
+                propsPoligonoCoordenada = getGeoJSONProps(rawGeoJSON.features[idxGeom].properties);
+                padronDondeCaePunto = cleanPadron(propsPoligonoCoordenada.padron);
+                indexPoligonoCoordenada = idxGeom;
+                break;
+              }
+            }
+          }
+
+          // ============================================================
+          // PASO 3: COMPARAR EL CAMPO "padrones" DEL JSON CONTRA
+          // LOS PADRONES DEL GEOJSON DE LA LOCALIDAD FILTRADA.
+          // ============================================================
+          const padronesQuePertenecen = listaPadronesDeclarados.filter(padron => mapaPadronesLoc.has(padron));
+          const padronesQueNoPertenecen = listaPadronesDeclarados.filter(padron => !mapaPadronesLoc.has(padron));
+          const coincideDeclarado = !!padronDondeCaePunto && listaPadronesDeclarados.includes(padronDondeCaePunto);
+
+          // También se considera coincidencia cuando el padrón declarado
+          // está a 500 m o menos de la coordenada, aunque el punto esté
+          // fuera del polígono.
+          const resultadoDistanciaPadron = obtenerDistanciaMinimaPadronesDeclarados(
+            listaPadronesDeclarados,
+            mapaPadronesLoc,
+            pointTurf
+          );
+
+          const distanciaAlPadronDeclarado = resultadoDistanciaPadron.distanciaMinima;
+          const padronDeclaradoMasCercano = resultadoDistanciaPadron.padronMasCercano;
+          const coincidePorDistancia = !coincideDeclarado &&
+            isFinite(distanciaAlPadronDeclarado) &&
+            distanciaAlPadronDeclarado <= 500;
+
+          const coincideValidacion = coincideDeclarado || coincidePorDistancia;
+
+          if (coincideValidacion) coincidencias++;
+
+          // Resaltar TODOS los padrones declarados que efectivamente existen
+          // en la localidad seleccionada.
+          padronesQuePertenecen.forEach(padron => {
+            mapaPadronesLoc.get(padron).forEach(item => {
+              indicesPoligonosAfectados.add(item.index);
+              const esPadronEnCoordenada = padron === padronDondeCaePunto;
+              const esPadronDentroDe500m = !coincideDeclarado &&
+                coincidePorDistancia &&
+                padron === padronDeclaradoMasCercano;
+
+              currentStatusMap[item.index] = (esPadronEnCoordenada || esPadronDentroDe500m)
+                ? 'match'
+                : 'declared_far';
+            });
+          });
+
+          // El padrón donde cae la coordenada siempre se muestra/resalta.
+          if (indexPoligonoCoordenada !== -1) {
+            indicesPoligonosAfectados.add(indexPoligonoCoordenada);
+            currentStatusMap[indexPoligonoCoordenada] = coincideDeclarado ? 'match' : 'mismatch_point';
+          }
+
+          // ============================================================
+          // PASO 4: GEOCODIFICAR LA DIRECCIÓN DECLARADA Y DIBUJAR
+          // PUNTO + LÍNEA + DISTANCIA.
+          // ============================================================
+          let resultadoDireccion = null;
+          let distanciaMetros = null;
+
+          if (direccion) {
+            resultadoDireccion = await geocodificarDireccionDeclarada(
+              direccion,
+              datosPunto.localidad || localidadSeleccionada,
+              datosPunto.departamento || (propsPoligonoCoordenada ? propsPoligonoCoordenada.nomdepto : '')
+            );
+
+            if (resultadoDireccion && !isNaN(resultadoDireccion.lat) && !isNaN(resultadoDireccion.lng)) {
+              distanciaMetros = turf.distance(
+                pointTurf,
+                turf.point([resultadoDireccion.lng, resultadoDireccion.lat]),
+                { units: 'meters' }
+              );
+
+              const addressMarker = L.circleMarker(
+                [resultadoDireccion.lat, resultadoDireccion.lng],
+                {
+                  radius: 8,
+                  fillColor: '#8b5cf6',
+                  color: '#ffffff',
+                  weight: 2,
+                  fillOpacity: 0.95
+                }
+              ).addTo(addressMarkersGroup);
+
+              addressMarker.bindPopup(`
+                <b>Dirección declarada</b><br>
+                ${direccion}<br>
+                <small>${resultadoDireccion.display_name}</small>
+              `);
+
+              const line = L.polyline(
+                [[lat, lng], [resultadoDireccion.lat, resultadoDireccion.lng]],
+                {
+                  color: '#3b82f6',
+                  weight: 3,
+                  dashArray: '7,5',
+                  opacity: 0.85
+                }
+              ).addTo(connectionLinesGroup);
+
+              line.bindPopup(`<b>Distancia coordenada ↔ dirección</b><br>${formatearDistancia(distanciaMetros)}`);
+            }
+          }
+
+          // ============================================================
+          // PASO 5: RESULTADO VISUAL.
+          // ============================================================
+          const hayPadronDeclaradoValido = padronesQuePertenecen.length > 0;
+          const estadoVisual = coincideValidacion
+            ? 'match'
+            : (hayPadronDeclaradoValido ? 'declared-far' : (padronDondeCaePunto ? 'mismatch' : 'not-found'));
+
+          card.className = `result-card ${estadoVisual}`;
+
+          const htmlTagsPadrones = listaPadronesDeclarados.map(pDecl => {
+            const perteneceLocalidad = mapaPadronesLoc.has(pDecl);
+            const esElMismo = pDecl === padronDondeCaePunto;
+
+            let clase = 'padron-tag-mismatch';
+            let title = 'No encontrado en la localidad seleccionada';
+
+            if (esElMismo) {
+              clase = 'padron-tag-match';
+              title = 'Padrón donde cae la coordenada';
+            } else if (
+              perteneceLocalidad &&
+              coincidePorDistancia &&
+              pDecl === padronDeclaradoMasCercano
+            ) {
+              clase = 'padron-tag-match';
+              title = `Padrón declarado a ${formatearDistancia(distanciaAlPadronDeclarado)} de la coordenada (≤ 500 m)`;
+            } else if (perteneceLocalidad) {
+              clase = 'padron-tag-far';
+              title = 'Padrón declarado, existe en la localidad, pero la coordenada está fuera de este padrón y a más de 500 m';
+            }
+
+            return `<span class="padron-tag ${clase}" title="${title}">${pDecl}</span>`;
+          }).join(' ');
+
+          const nombreDeptoReal = propsPoligonoCoordenada ? propsPoligonoCoordenada.nomdepto : '';
+          const localidadReal = propsPoligonoCoordenada ? propsPoligonoCoordenada.nomloccat : '';
+
+          let fraseEspacial = '';
+          if (padronDondeCaePunto && coincideDeclarado) {
+            fraseEspacial = `La coordenada se ubica dentro del Padrón Declarado <b>${padronDondeCaePunto}</b> (${nombreDeptoReal || datosPunto.departamento || 'Departamento no informado'}).`;
+          } else if (coincidePorDistancia) {
+            fraseEspacial = `El Padrón Declarado <b>${padronDeclaradoMasCercano}</b> no contiene directamente la coordenada, pero se encuentra a <b>${formatearDistancia(distanciaAlPadronDeclarado)}</b> de ella. Se considera <b>coincidencia</b> porque la distancia es menor o igual a 500 m.`;
+          } else if (padronDondeCaePunto && padronesQuePertenecen.length > 0) {
+            fraseEspacial = `El/los Padrón(es) declarado(s) <b>${padronesQuePertenecen.join(', ')}</b> existen en la localidad seleccionada, pero la coordenada se ubica en el Padrón <b>${padronDondeCaePunto}</b>. Por lo tanto, el padrón declarado <b>coincide administrativamente, pero está alejado de la coordenada</b>.`;
+          } else if (padronDondeCaePunto) {
+            fraseEspacial = `La coordenada se ubica dentro del Padrón <b>${padronDondeCaePunto}</b>, pero este padrón <b>no figura</b> entre los padrones declarados.`;
+          } else if (padronesQuePertenecen.length > 0) {
+            fraseEspacial = `El/los Padrón(es) declarado(s) <b>${padronesQuePertenecen.join(', ')}</b> existen en la localidad seleccionada, pero la coordenada <b>no cae dentro de ninguno de ellos</b>.`;
+          } else {
+            fraseEspacial = `La coordenada <b>no cae dentro de ningún padrón</b> de la localidad seleccionada.`;
+          }
+
+          const distanciaHtml = distanciaMetros !== null
+            ? `<div><b>Distancia a la dirección declarada:</b> <b>${formatearDistancia(distanciaMetros)}</b></div>`
+            : `<div><b>Distancia a la dirección declarada:</b> <span style="color:#64748b;">No se pudo geocodificar la dirección</span></div>`;
+
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <b>ID: ${idPunto} - ${nombrePunto}</b>
+              <span class="badge ${
+                coincideDeclarado ? 'badge-ok' :
+                (hayPadronDeclaradoValido ? 'badge-warn' : 'badge-error')
+              }">
+                ${
+                  coincideDeclarado ? '✅ COORDENADA EN PADRÓN DECLARADO' :
+                  (hayPadronDeclaradoValido ? '🟠 PADRÓN DECLARADO ALEJADO DE LA COORDENADA' : '⚠️ DISCREPANCIA')
+                }
+              </span>
+            </div>
+
+            <div style="margin-top:6px;"><b>Localidad utilizada para la comparación:</b> ${localidadSeleccionada}</div>
+            <div><b>Padrones declarados:</b> ${htmlTagsPadrones || '<i>Ninguno</i>'}</div>
+
+            <div class="card-section">
+              <div class="card-section-title">Comparación de Padrones</div>
+              <div><b>Encontrados en la localidad seleccionada:</b> ${padronesQuePertenecen.length ? padronesQuePertenecen.join(', ') : '<span style="color:#dc2626;">Ninguno</span>'}</div>
+              <div><b>No encontrados en la localidad seleccionada:</b> ${padronesQueNoPertenecen.length ? `<span style="color:#dc2626;">${padronesQueNoPertenecen.join(', ')}</span>` : '<span style="color:#16a34a;">Ninguno</span>'}</div>
+              ${(!coincideValidacion && padronesQuePertenecen.length) ? `<div style="margin-top:5px;color:#c2410c;"><b>⚠️ Advertencia espacial:</b> el padrón declarado existe, pero la coordenada está fuera de su polígono.</div>` : ''}
+            </div>
+
+            <div class="card-section">
+              <div class="card-section-title">Información Declarada</div>
+              <div><b>Departamento Declarado:</b> ${datosPunto.departamento || '<i>No informado</i>'}</div>
+              <div><b>Localidad Declarada:</b> ${datosPunto.localidad || '<i>No informada</i>'}</div>
+            </div>
+
+            <div class="card-section">
+              <div class="card-section-title">Análisis Espacial (Coordenada)</div>
+              <div><b>Departamento de Capa Base:</b> ${ubicacionBase.departamento || '<span style="color:#dc2626;">No determinado</span>'}</div>
+              <div><b>Localidad de Capa Base:</b> ${ubicacionBase.localidad || '<span style="color:#dc2626;">No determinada</span>'}</div>
+              <div style="margin-top:6px;"><b>Padrón Evaluado en Coordenada:</b> ${padronDondeCaePunto ? `<b>${padronDondeCaePunto}</b>` : '<span style="color:#dc2626;">Fuera de los padrones de la localidad seleccionada</span>'}</div>
+              <div style="margin-top:5px;">${fraseEspacial}</div>
+              ${isFinite(distanciaAlPadronDeclarado) ? `<div style="margin-top:5px;"><b>Distancia mínima al padrón declarado más cercano:</b> ${formatearDistancia(distanciaAlPadronDeclarado)}</div>` : ''}
+            </div>
+
+            <div class="card-section">
+              <div class="card-section-title">Dirección Declarada y Distancia</div>
+              <div><b>Dirección:</b> ${direccion || '<i>No informada</i>'}</div>
+              ${distanciaHtml}
+              ${resultadoDireccion ? `<div style="margin-top:4px;font-size:0.72rem;color:#64748b;">Ubicación geocodificada: ${resultadoDireccion.display_name}</div>` : ''}
+            </div>
+          `;
+
+          card.onclick = () => {
+            map.setView([lat, lng], 17);
+          };
+
+          resultsDiv.appendChild(card);
+        }
+
+        // Resumen final.
+        const resumenFinal = document.createElement('div');
+        resumenFinal.className = 'card-section';
+        resumenFinal.innerHTML = `
+          <div class="card-section-title">Resumen de Validación</div>
+          <div><b>Registros procesados:</b> ${procesados}</div>
+          <div><b>Con coordenadas válidas:</b> ${conCoordenada}</div>
+          <div><b>Coincidencias coordenada ↔ padrón declarado:</b> ${coincidencias}</div>
+        `;
+        resultsDiv.insertBefore(resumenFinal, resultsDiv.children[1] || null);
+
+        validacionActiva = true;
+        renderGeoJSONVisible();
+      } catch (err) {
+        console.error(err);
+        alert('Error durante la validación: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.innerHTML = textoOriginal;
+      }
+    }
+
+    function formatearDistancia(metros) {
+      if (metros === null || isNaN(metros)) return 'No disponible';
+      if (metros < 1000) return `${metros.toFixed(0)} m`;
+      return `${(metros / 1000).toFixed(2)} km`;
+    }
+  </script>
+</body>
+</html>
