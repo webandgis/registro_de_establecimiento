@@ -403,6 +403,9 @@
           <button type="button" class="btn-secondary" onclick="buscarDireccionManual()" title="Buscar ubicación de la dirección escrita">
             Buscar Dirección
           </button>
+          <button type="button" class="btn-danger" onclick="limpiarIngresoManual()" title="Borrar los datos del ingreso manual" style="flex: 1;">
+            🗑️ Limpiar Ingreso Manual
+          </button>
         </div>
       </div>
 
@@ -868,8 +871,8 @@
           }).addTo(markersGroup);
 
           const id = p.id_simple || p.id || idx + 1;
-          const nom = p.nombre_establecimiento || p.nombre || p.establecimiento || "Punto " + id;
-          marker.bindPopup(`<b>ID:</b> ${id}<br><b>Nombre de la planta:</b> ${nom}<br><b>Coordenadas:</b> ${lat}, ${lng}`);
+          const nom = p.nombre || p.establecimiento || "Punto " + id;
+          marker.bindPopup(`<b>ID:</b> ${id}<br><b>Establecimiento:</b> ${nom}`);
         }
       });
 
@@ -908,10 +911,16 @@
       actualizarIndicadores();
       dibujarPuntosEnMapa();
 
-      // Limpiar campos del formulario
+      // Los datos del ingreso manual permanecen en los campos
+      // para poder revisarlos o modificarlos.
+    }
+
+    function limpiarIngresoManual() {
       document.getElementById('inputIdSimple').value = '';
       document.getElementById('inputNombre').value = '';
       document.getElementById('inputDireccion').value = '';
+      document.getElementById('inputLocalidad').value = '';
+      document.getElementById('inputDepto').value = '';
       document.getElementById('inputPadrones').value = '';
       document.getElementById('inputLat').value = '';
       document.getElementById('inputLng').value = '';
@@ -1546,7 +1555,6 @@
 
             <div style="margin-top:6px;"><b>Localidad utilizada para la comparación:</b> ${localidadSeleccionada}</div>
             <div><b>Padrones declarados:</b> ${htmlTagsPadrones || '<i>Ninguno</i>'}</div>
-            <div><b>Coordenadas:</b> ${lat}, ${lng}</div>
 
             <div class="card-section">
               <div class="card-section-title">Comparación de Padrones</div>
