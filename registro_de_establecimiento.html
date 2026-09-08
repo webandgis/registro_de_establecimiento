@@ -289,19 +289,6 @@
       pointer-events: none;
     }
 
-    .padron-label-match {
-      color: #15803d;
-      font-weight: 800;
-    }
-
-    .padron-label-far {
-      color: #c2410c;
-    }
-
-    .padron-label-mismatch {
-      color: #b91c1c;
-    }
-
     #map {
       flex-grow: 1;
       height: 100%;
@@ -881,8 +868,8 @@
           }).addTo(markersGroup);
 
           const id = p.id_simple || p.id || idx + 1;
-          const nom = p.nombre || p.establecimiento || "Punto " + id;
-          marker.bindPopup(`<b>ID:</b> ${id}<br><b>Establecimiento:</b> ${nom}`);
+          const nom = p.nombre_establecimiento || p.nombre || p.establecimiento || "Punto " + id;
+          marker.bindPopup(`<b>ID:</b> ${id}<br><b>Nombre de la planta:</b> ${nom}<br><b>Coordenadas:</b> ${lat}, ${lng}`);
         }
       });
 
@@ -1040,9 +1027,8 @@
       if (modoMostrarTodo) {
         btn.classList.add('active');
         btn.innerHTML = '👁️ Ocultar Padrones Extra';
-
         if (map.getZoom() < MIN_ZOOM_PADRONES) {
-          alert(`Acerque el mapa al menos a Zoom ${MIN_ZOOM_PADRONES} para visualizar los padrones y sus etiquetas.`);
+          alert(`Acerque el mapa (Zoom mínimo ${MIN_ZOOM_PADRONES}) para visualizar los padrones.`);
         }
       } else {
         btn.classList.remove('active');
@@ -1084,7 +1070,7 @@
           const feat = rawGeoJSON.features[i];
           const props = getGeoJSONProps(feat.properties);
 
-          // Mostrar solamente los padrones de la localidad seleccionada.
+          // Si hay localidad seleccionada, renderizar preferentemente los de esa localidad
           if (selectedLoc && cleanStr(props.nomloccat) !== selectedLoc) continue;
 
           const bbox = bboxesFeatures[i];
@@ -1140,77 +1126,29 @@
         },
         onEachFeature: function(feature, layer) {
           const p = getGeoJSONProps(feature.properties);
-          layer.bindPopup(
-            `<b>Padrón Real:</b> ${p.padron}<br>` +
-            `<b>Localidad (NOMLOCCAT):</b> ${p.nomloccat}<br>` +
-            `<b>Departamento:</b> ${p.nomdepto}`
-          );
+          layer.bindPopup(`<b>Padrón Real:</b> ${p.padron}<br><b>Localidad (NOMLOCCAT):</b> ${p.nomloccat}<br><b>Departamento:</b> ${p.nomdepto}`);
         }
       }).addTo(map);
 
-      // ================================================================
-      // ETIQUETAS DE PADRONES
-      //
-      // En validación:
-      //   - se muestran los padrones coincidentes;
-      //   - también los padrones declarados que existen en la localidad.
-      //
-      // Con "Mostrar Todos los Padrones a este Zoom":
-      //   - se muestran las etiquetas de todos los padrones visibles
-      //     de la localidad seleccionada.
-      //
-      // Los coincidentes tienen prioridad y no desaparecen por
-      // solapamiento con otras etiquetas.
-      // ================================================================
-      if (validacionActiva || modoMostrarTodo) {
+      // Etiquetas de padrón: se colocan en el centroide y se evita mostrar
+      // etiquetas que se solapen entre sí en la pantalla.
+      if (validacionActiva) {
         const ocupados = [];
-        const size = map.getSize();
+        const zoom = map.getZoom();
 
-        const featuresConDatos = featuresParaRenderizar
-          .map(feature => {
-            const indexOriginal = rawGeoJSON.features.indexOf(feature);
-            const props = getGeoJSONProps(feature.properties);
-
-            return {
-              feature,
-              indexOriginal,
-              padron: cleanPadron(props.padron),
-              status: currentStatusMap[indexOriginal]
-            };
-          })
-          .filter(item => item.padron);
-
-        // Primero se procesan los coincidentes para darles prioridad.
-        featuresConDatos.sort((a, b) => {
-          const prioridad = status => {
-            if (status === 'match') return 0;
-            if (status === 'declared_far') return 1;
-            if (status === 'mismatch_point') return 2;
-            if (status === 'declared_only') return 3;
-            return 4;
-          };
-
-          return prioridad(a.status) - prioridad(b.status);
-        });
-
-        featuresConDatos.forEach(item => {
-          const { feature, padron, status } = item;
+        featuresParaRenderizar.forEach(feature => {
+          const props = getGeoJSONProps(feature.properties);
+          const padron = cleanPadron(props.padron);
+          if (!padron) return;
 
           try {
             const centroide = turf.centroid(feature);
             const coords = centroide.geometry.coordinates;
             const puntoPantalla = map.latLngToContainerPoint([coords[1], coords[0]]);
 
+            // Ancho aproximado de la etiqueta según cantidad de caracteres.
             const ancho = Math.max(28, padron.length * 7 + 12);
             const alto = 18;
-
-            if (
-              puntoPantalla.x < -ancho ||
-              puntoPantalla.x > size.x + ancho ||
-              puntoPantalla.y < -alto ||
-              puntoPantalla.y > size.y + alto
-            ) return;
-
             const rect = {
               left: puntoPantalla.x - ancho / 2,
               right: puntoPantalla.x + ancho / 2,
@@ -1218,45 +1156,26 @@
               bottom: puntoPantalla.y + alto / 2
             };
 
-            const seSolapa = ocupados.some(r =>
-              !(rect.right < r.left ||
-                rect.left > r.right ||
-                rect.bottom < r.top ||
-                rect.top > r.bottom)
-            );
+            // Si el centroide queda fuera de la vista, no crear etiqueta.
+            const size = map.getSize();
+            if (puntoPantalla.x < -ancho || puntoPantalla.x > size.x + ancho ||
+                puntoPantalla.y < -alto || puntoPantalla.y > size.y + alto) return;
 
-            // Los coincidentes siempre se etiquetan.
-            // Los demás mantienen la prevención de solapamiento.
-            const esCoincidente = status === 'match';
+            const seSolapa = ocupados.some(r => !(rect.right < r.left || rect.left > r.right || rect.bottom < r.top || rect.top > r.bottom));
+            if (seSolapa) return;
 
-            if (seSolapa && !esCoincidente) return;
-
-            if (!seSolapa || esCoincidente) {
-              ocupados.push(rect);
-            }
-
-            let claseLabel = 'padron-label';
-
-            if (status === 'match') {
-              claseLabel += ' padron-label-match';
-            } else if (status === 'declared_far') {
-              claseLabel += ' padron-label-far';
-            } else if (status === 'mismatch_point') {
-              claseLabel += ' padron-label-mismatch';
-            }
+            ocupados.push(rect);
 
             L.marker([coords[1], coords[0]], {
               icon: L.divIcon({
-                className: claseLabel,
+                className: 'padron-label',
                 html: padron,
                 iconSize: [ancho, alto],
                 iconAnchor: [ancho / 2, alto / 2]
               }),
               interactive: false,
-              keyboard: false,
-              zIndexOffset: esCoincidente ? 1000 : 0
+              keyboard: false
             }).addTo(padronLabelsGroup);
-
           } catch (err) {
             // Algunas geometrías inválidas pueden no permitir calcular el centroide.
           }
@@ -1627,6 +1546,7 @@
 
             <div style="margin-top:6px;"><b>Localidad utilizada para la comparación:</b> ${localidadSeleccionada}</div>
             <div><b>Padrones declarados:</b> ${htmlTagsPadrones || '<i>Ninguno</i>'}</div>
+            <div><b>Coordenadas:</b> ${lat}, ${lng}</div>
 
             <div class="card-section">
               <div class="card-section-title">Comparación de Padrones</div>
