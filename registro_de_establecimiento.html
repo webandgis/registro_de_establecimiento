@@ -450,7 +450,7 @@
              <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" class="btn-consult-link">
             <span>🗺️ Google Maps</span>
             <span>↗</span>
-         
+          </a>
         </div>
       </div>
 
@@ -513,8 +513,6 @@
     const addressMarkersGroup = L.layerGroup().addTo(map);
     const connectionLinesGroup = L.layerGroup().addTo(map);
     const padronLabelsGroup = L.layerGroup().addTo(map);
-    // Geometrías poligonales incluidas dentro del JSON de puntos.
-    const jsonPolygonsGroup = L.layerGroup().addTo(map);
 
     L.control.layers({
       "Satelital (Esri)": L.layerGroup([esriSatellite, cartoLabels]),
@@ -523,7 +521,6 @@
       "Puntos Coordenadas": markersGroup,
       "Puntos Direcciones (Violeta)": addressMarkersGroup,
       "Líneas Distancia": connectionLinesGroup,
-      "Geometrías del JSON": jsonPolygonsGroup,
       "Capa KML/KMZ": kmlLayerGroup,
       "Capa Departamentos": deptosLayerGroup,
       "Capa Localidades INE": locINELayerGroup
@@ -596,43 +593,8 @@
       return {
         departamento: p.departamento || p.depto || p.DEPARTAMENTO || p.NOMDEPTO || "",
         localidad: p.localidad || p.LOCALIDAD || p.NOMLOCCAT || "",
-        padrones: p.padron || p.padrones || p.Padron || p.PADRON || "",
-        tramitesSeleccionados: Array.isArray(p.tramites_seleccionados)
-          ? p.tramites_seleccionados
-          : []
+        padrones: p.padron || p.padrones || p.Padron || p.PADRON || ""
       };
-    }
-
-    // Obtiene los trámites directamente del campo "tramites_seleccionados".
-    function obtenerTramitesSeleccionados(p) {
-      const tramites = p && (p.tramites_seleccionados || p.tramitesSeleccionados || p.TRAMITES_SELECCIONADOS);
-      if (!Array.isArray(tramites)) return [];
-
-      return tramites.map((tramite, index) => ({
-        tramite_id: tramite && tramite.tramite_id != null ? tramite.tramite_id.toString() : "",
-        tramite_nombre: tramite && tramite.tramite_nombre != null ? tramite.tramite_nombre.toString().trim() : "",
-        index: index + 1
-      }));
-    }
-
-    // Obtiene la geometría del campo "coord_poligono" del JSON.
-    // Estructura esperada: [ [ {lat, lng}, {lat, lng}, ... ] ]
-    // También admite un único anillo sin el nivel intermedio.
-    function obtenerGeometriaPoligono(p) {
-      const geometria = p && (p.coord_poligono || p.coordPoligono || p.COORD_POLIGONO);
-      if (!Array.isArray(geometria) || geometria.length === 0) return [];
-
-      const anillos = (geometria.length > 0 && !Array.isArray(geometria[0]) && typeof geometria[0] === 'object')
-        ? [geometria]
-        : geometria;
-
-      return anillos
-        .filter(anillo => Array.isArray(anillo))
-        .map(anillo => anillo.map(pt => ({
-          lat: parseFloat(pt.lat ?? pt.latitud ?? pt.y ?? pt.Y),
-          lng: parseFloat(pt.lng ?? pt.longitud ?? pt.lon ?? pt.x ?? pt.X)
-        })).filter(pt => !isNaN(pt.lat) && !isNaN(pt.lng)))
-        .filter(anillo => anillo.length >= 3);
     }
 
     // Determina la ubicación administrativa REAL del punto usando exclusivamente
@@ -892,45 +854,11 @@
 
     function dibujarPuntosEnMapa() {
       markersGroup.clearLayers();
-      jsonPolygonsGroup.clearLayers();
       if (listaPuntos.length === 0) return;
 
       const bounds = [];
       listaPuntos.forEach((p, idx) => {
         const { lat, lng } = obtenerCoordenadasPunto(p);
-        const id = p.id_simple || p.id || idx + 1;
-        const nom = p.nombre_establecimiento || p.nombre || p.establecimiento || "Punto " + id;
-
-        // ============================================================
-        // GEOMETRÍA DEL JSON: coord_poligono
-        // Estructura: [ [ {lat, lng}, ... ] ]
-        // ============================================================
-        const coordPoligono = obtenerGeometriaPoligono(p);
-
-        if (coordPoligono.length > 0) {
-          const poligono = L.polygon(coordPoligono, {
-            color: "#2563eb",
-            weight: 3,
-            fillColor: "#3b82f6",
-            fillOpacity: 0.25
-          }).addTo(jsonPolygonsGroup);
-
-          poligono.bindPopup(`
-            <b>Geometría del JSON</b><br>
-            <b>ID:</b> ${id}<br>
-            <b>Establecimiento:</b> ${nom}<br>
-            <b>Anillos:</b> ${coordPoligono.length}<br>
-            <b>Puntos del primer anillo:</b> ${coordPoligono[0].length}
-          `);
-
-          const polygonBounds = poligono.getBounds();
-          if (polygonBounds.isValid()) {
-            const sw = polygonBounds.getSouthWest();
-            const ne = polygonBounds.getNorthEast();
-            bounds.push([sw.lat, sw.lng]);
-            bounds.push([ne.lat, ne.lng]);
-          }
-        }
 
         if (!isNaN(lat) && !isNaN(lng)) {
           bounds.push([lat, lng]);
@@ -942,6 +870,8 @@
             fillOpacity: 0.9
           }).addTo(markersGroup);
 
+          const id = p.id_simple || p.id || idx + 1;
+          const nom = p.nombre || p.establecimiento || "Punto " + id;
           marker.bindPopup(`<b>ID:</b> ${id}<br><b>Establecimiento:</b> ${nom}`);
         }
       });
@@ -1081,7 +1011,6 @@
     function limpiarPuntosCargados() {
       listaPuntos = [];
       markersGroup.clearLayers();
-      jsonPolygonsGroup.clearLayers();
       addressMarkersGroup.clearLayers();
       connectionLinesGroup.clearLayers();
       limpiarCapaGeoJSON();
@@ -1399,7 +1328,6 @@
           const { lat, lng } = obtenerCoordenadasPunto(p);
           const datosPunto = obtenerDatosPunto(p);
           const listaPadronesDeclarados = parsePadronesList(datosPunto.padrones);
-          const tramitesSeleccionados = obtenerTramitesSeleccionados(p);
 
           procesados++;
 
@@ -1417,12 +1345,6 @@
               </div>
               <div style="margin-top:6px;"><b>Localidad seleccionada:</b> ${localidadSeleccionada}</div>
               <div><b>Padrones declarados:</b> ${listaPadronesDeclarados.join(', ') || '<i>Ninguno</i>'}</div>
-              <div class="card-section" style="margin-top:10px;">
-                <div class="card-section-title">Trámites seleccionados</div>
-                ${obtenerTramitesSeleccionados(p).length > 0
-                  ? obtenerTramitesSeleccionados(p).map(t => `<div style="margin-bottom:5px;"><b>Trámite ${t.tramite_id || t.index}</b>${t.tramite_nombre ? ` - ${t.tramite_nombre}` : ''}</div>`).join('')
-                  : '<i>No hay trámites seleccionados</i>'}
-              </div>
               <div style="margin-top:6px;color:#b45309;">No se pudo realizar el análisis espacial porque el JSON no contiene coordenadas válidas.</div>
             `;
             resultsDiv.appendChild(card);
@@ -1617,17 +1539,6 @@
             ? `<div><b>Distancia a la dirección declarada:</b> <b>${formatearDistancia(distanciaMetros)}</b></div>`
             : `<div><b>Distancia a la dirección declarada:</b> <span style="color:#64748b;">No se pudo geocodificar la dirección</span></div>`;
 
-          // ============================================================
-          // TRÁMITES SELECCIONADOS DEL JSON
-          // ============================================================
-          const tramitesHtml = tramitesSeleccionados.length > 0
-            ? tramitesSeleccionados.map(t => `
-                <div style="margin-bottom:5px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;">
-                  <b>Trámite ${t.tramite_id || t.index}</b>${t.tramite_nombre ? ` - ${t.tramite_nombre}` : ''}
-                </div>
-              `).join('')
-            : '<i>No hay trámites seleccionados</i>';
-
           card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
               <b>ID: ${idPunto} - ${nombrePunto}</b>
@@ -1656,11 +1567,6 @@
               <div class="card-section-title">Información Declarada</div>
               <div><b>Departamento Declarado:</b> ${datosPunto.departamento || '<i>No informado</i>'}</div>
               <div><b>Localidad Declarada:</b> ${datosPunto.localidad || '<i>No informada</i>'}</div>
-            </div>
-
-            <div class="card-section">
-              <div class="card-section-title">Trámites seleccionados</div>
-              ${tramitesHtml}
             </div>
 
             <div class="card-section">
