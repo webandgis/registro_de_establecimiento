@@ -164,6 +164,16 @@
       margin-top: 4px;
     }
 
+    .json-preview-box {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background-color: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: #334155;
+    }
+
     .consult-links-container {
       display: flex;
       flex-direction: column;
@@ -345,6 +355,15 @@
           <label>JSON Puntos a Validar:</label>
           <input type="file" id="inputJSONPuntos" accept=".json" onchange="cargarPuntosJSON(event)">
           <div id="statusPuntos" class="status-indicator">Puntos cargados: 0</div>
+          
+          <!-- Bloque de Previsualización del JSON cargado -->
+          <div id="jsonPreviewBox" class="json-preview-box" style="display: none;">
+            <div style="font-weight: 700; margin-bottom: 4px; color: #1e293b;">📋 Datos del Registro JSON:</div>
+            <div><b>Establecimiento:</b> <span id="prevNombre">-</span></div>
+            <div><b>Departamento:</b> <span id="prevDepto">-</span></div>
+            <div><b>Localidad:</b> <span id="prevLocalidad">-</span></div>
+          </div>
+
           <button type="button" class="btn-danger" style="margin-top: 6px;" onclick="limpiarPuntosCargados()">
             🗑️ Limpiar Datos Cargados
           </button>
@@ -521,7 +540,7 @@
     const addressMarkersGroup = L.layerGroup().addTo(map);
     const connectionLinesGroup = L.layerGroup().addTo(map);
     const padronLabelsGroup = L.layerGroup().addTo(map);
-    const userPolygonsGroup = L.layerGroup().addTo(map); // Capa para coord_poligono
+    const userPolygonsGroup = L.layerGroup().addTo(map);
 
     L.control.layers({
       "Satelital (Esri)": L.layerGroup([esriSatellite, cartoLabels]),
@@ -842,12 +861,29 @@
           const data = JSON.parse(evt.target.result);
           listaPuntos = Array.isArray(data) ? data : [data];
           actualizarIndicadores();
+          actualizarPrevisualizacionJSON();
           dibujarPuntosEnMapa();
         } catch (err) {
           alert("Error al cargar el archivo JSON de puntos.");
         }
       };
       reader.readAsText(file);
+    }
+
+    function actualizarPrevisualizacionJSON() {
+      const box = document.getElementById('jsonPreviewBox');
+      if (listaPuntos.length === 0) {
+        box.style.display = 'none';
+        return;
+      }
+
+      const p = listaPuntos[0];
+      const datos = obtenerDatosPunto(p);
+
+      document.getElementById('prevNombre').textContent = p.nombre_establecimiento || p.nombre || p.establecimiento || "No informado";
+      document.getElementById('prevDepto').textContent = datos.departamento || "No informado";
+      document.getElementById('prevLocalidad').textContent = datos.localidad || "No informada";
+      box.style.display = 'block';
     }
 
     function dibujarPuntosEnMapa() {
@@ -875,7 +911,6 @@
           marker.bindPopup(`<b>ID:</b> ${id}<br><b>Establecimiento:</b> ${nom}`);
         }
 
-        // Renderizar coord_poligono si existe
         if (p.coord_poligono && Array.isArray(p.coord_poligono)) {
           p.coord_poligono.forEach(ring => {
             if (Array.isArray(ring)) {
@@ -929,6 +964,7 @@
 
       listaPuntos.push(nuevoPunto);
       actualizarIndicadores();
+      actualizarPrevisualizacionJSON();
       dibujarPuntosEnMapa();
     }
 
@@ -1035,6 +1071,7 @@
       validacionActiva = false;
 
       document.getElementById('inputJSONPuntos').value = '';
+      document.getElementById('jsonPreviewBox').style.display = 'none';
       document.getElementById('results').innerHTML = '<div style="color: #94a3b8; font-size: 0.8rem; font-style: italic;">Cargue los archivos e indique la localidad para comenzar la validación.</div>';
       actualizarIndicadores();
     }
@@ -1331,7 +1368,6 @@
           const nombrePunto = p.nombre_establecimiento || p.nombre || p.establecimiento || 'Establecimiento';
           const direccion = p.direccion || '';
 
-          // Trámites ingresados
           const tramites = p.tramites_seleccionados || [];
           let htmlTramites = '';
           if (Array.isArray(tramites) && tramites.length > 0) {
