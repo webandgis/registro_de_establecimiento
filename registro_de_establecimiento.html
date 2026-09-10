@@ -441,6 +441,10 @@
           <button id="btnMostrarTodo" class="btn-outline" onclick="toggleMostrarTodo()">
             👁️ Mostrar Todos los Padrones a este Zoom
           </button>
+          <button id="btnMostrarCoincidentes" class="btn-outline active" onclick="togglePadronesCoincidentes()">
+            👁️ Ocultar Padrones Coincidentes
+          </button>
+        
         </div>
       </div>
 
@@ -525,6 +529,8 @@
     let indicesPoligonosAfectados = new Set();
     let validacionActiva = false;
     let modoMostrarTodo = false;
+    let mostrarPadronesCoincidentes = true;
+    let mostrarPoligonosIngresados = true;
     
     // Capas
     const deptosLayerGroup = L.layerGroup().addTo(map);
@@ -924,10 +930,15 @@
 
           const id = p.id_simple || p.id || idx + 1;
           const nom = p.nombre_establecimiento || p.nombre || p.establecimiento || "Punto " + id;
-          marker.bindPopup(`<b>ID:</b> ${id}<br><b>Establecimiento:</b> ${nom}`);
+          marker.bindPopup(`
+            <b>ID:</b> ${id}<br>
+            <b>Establecimiento:</b> ${nom}<br>
+            <b>Coordenada X:</b> ${p.coordenada_x ?? p.longitud ?? p.lng ?? p.lon ?? p.x ?? p.X ?? "No informada"}<br>
+            <b>Coordenada Y:</b> ${p.coordenada_y ?? p.latitud ?? p.lat ?? p.y ?? p.Y ?? "No informada"}
+          `);
         }
 
-        if (p.coord_poligono && Array.isArray(p.coord_poligono)) {
+        if (mostrarPoligonosIngresados && p.coord_poligono && Array.isArray(p.coord_poligono)) {
           p.coord_poligono.forEach(ring => {
             if (Array.isArray(ring)) {
               const latLngs = ring.map(pt => [pt.lat, pt.lng]);
@@ -1115,6 +1126,36 @@
       renderGeoJSONVisible();
     }
 
+    function togglePadronesCoincidentes() {
+      mostrarPadronesCoincidentes = !mostrarPadronesCoincidentes;
+      const btn = document.getElementById('btnMostrarCoincidentes');
+
+      if (mostrarPadronesCoincidentes) {
+        btn.classList.add('active');
+        btn.innerHTML = '👁️ Ocultar Padrones Coincidentes';
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '👁️ Mostrar Padrones Coincidentes';
+      }
+
+      renderGeoJSONVisible();
+    }
+
+    function togglePoligonosIngresados() {
+      mostrarPoligonosIngresados = !mostrarPoligonosIngresados;
+      const btn = document.getElementById('btnMostrarPoligonosIngresados');
+
+      if (mostrarPoligonosIngresados) {
+        btn.classList.add('active');
+        btn.innerHTML = '👁️ Ocultar Polígonos Ingresados';
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '👁️ Mostrar Polígonos Ingresados';
+      }
+
+      dibujarPuntosEnMapa();
+    }
+
     function limpiarCapaGeoJSON() {
       if (geojsonLayer) {
         map.removeLayer(geojsonLayer);
@@ -1176,6 +1217,15 @@
           const indexOriginal = rawGeoJSON.features.indexOf(feature);
           const status = currentStatusMap[indexOriginal];
 
+          if (!mostrarPadronesCoincidentes && status === 'match') {
+            return {
+              color: "transparent",
+              weight: 0,
+              fillColor: "transparent",
+              fillOpacity: 0
+            };
+          }
+
           let color = "#94a3b8";
           let fillOpacity = 0.2;
 
@@ -1213,6 +1263,9 @@
           const props = getGeoJSONProps(feature.properties);
           const padron = cleanPadron(props.padron);
           if (!padron) return;
+
+          const indexOriginal = rawGeoJSON.features.indexOf(feature);
+          if (!mostrarPadronesCoincidentes && currentStatusMap[indexOriginal] === 'match') return;
 
           try {
             const centroide = turf.centroid(feature);
@@ -1590,6 +1643,8 @@
             </div>
 
             <div style="margin-top:6px;"><b>Localidad utilizada para la comparación:</b> ${localidadSeleccionada}</div>
+            <div><b>Coordenada X:</b> ${p.coordenada_x ?? p.longitud ?? p.lng ?? p.lon ?? p.x ?? p.X ?? 'No informada'}</div>
+            <div><b>Coordenada Y:</b> ${p.coordenada_y ?? p.latitud ?? p.lat ?? p.y ?? p.Y ?? 'No informada'}</div>
             <div><b>Padrones declarados:</b> ${htmlTagsPadrones || '<i>Ninguno</i>'}</div>
 
             <div class="card-section">
