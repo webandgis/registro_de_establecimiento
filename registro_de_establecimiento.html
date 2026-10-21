@@ -505,14 +505,17 @@
     const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri'
     });
-    const cartoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 20 });
-    const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+    // Se usa la imagen satelital de Esri sin una capa de etiquetas externa
+    // que pueda devolver el mensaje "API key required".
+    const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    });
 
     const map = L.map('map', {
       center: [-32.8755, -56.0202],
       zoom: 7,
       preferCanvas: true,
-      layers: [esriSatellite, cartoLabels]
+      layers: [esriSatellite]
     });
 
     let rawGeoJSON = null;
@@ -544,7 +547,7 @@
     const userPolygonsGroup = L.layerGroup().addTo(map);
 
     L.control.layers({
-      "Satelital (Esri)": L.layerGroup([esriSatellite, cartoLabels]),
+      "Satelital (Esri)": esriSatellite,
       "Mapa Callejero (OSM)": openStreetMap
     }, {
       "Puntos Coordenadas": markersGroup,
@@ -1412,11 +1415,19 @@
 
         const resumenFiltro = document.createElement('div');
         resumenFiltro.className = 'card-section';
+        const totalPadronesDeclarados = listaPuntos.reduce((total, punto) => {
+          const datos = obtenerDatosPunto(punto);
+          return total + new Set(parsePadronesList(datos.padrones)).size;
+        }, 0);
+
         resumenFiltro.innerHTML = `
-          <div class="card-section-title">Filtro aplicado antes de comparar</div>
+          <div class="card-section-title">Resumen de resultados</div>
           <div><b>Localidad GeoJSON:</b> ${localidadSeleccionada}</div>
           <div><b>Polígonos de esta localidad:</b> ${indicesLocalidadGeoJSON.length.toLocaleString('es-UY')}</div>
-          <div><b>Padrones únicos encontrados:</b> ${mapaPadronesLoc.size.toLocaleString('es-UY')}</div>
+          <div><b>Padrones únicos encontrados en la capa:</b> ${mapaPadronesLoc.size.toLocaleString('es-UY')}</div>
+          <div style="margin-top:6px;padding:8px;background:#eff6ff;border-radius:4px;color:#1d4ed8;">
+            <b>Total de padrones declarados:</b> ${totalPadronesDeclarados.toLocaleString('es-UY')}
+          </div>
         `;
         resultsDiv.appendChild(resumenFiltro);
 
@@ -1455,6 +1466,7 @@
                 <span class="badge badge-warn">⚠️ SIN COORDENADA</span>
               </div>
               <div style="margin-top:6px;"><b>Localidad seleccionada:</b> ${localidadSeleccionada}</div>
+              <div><b>Total de Padrones Declarados:</b> ${new Set(listaPadronesDeclarados).size.toLocaleString('es-UY')}</div>
               <div><b>Padrones declarados:</b> ${listaPadronesDeclarados.join(', ') || '<i>Ninguno</i>'}</div>
               <div class="card-section">
                 <div class="card-section-title">Trámites Ingresados en el Registro</div>
@@ -1645,6 +1657,7 @@
             <div style="margin-top:6px;"><b>Localidad utilizada para la comparación:</b> ${localidadSeleccionada}</div>
             <div><b>Coordenada X:</b> ${p.coordenada_x ?? p.longitud ?? p.lng ?? p.lon ?? p.x ?? p.X ?? 'No informada'}</div>
             <div><b>Coordenada Y:</b> ${p.coordenada_y ?? p.latitud ?? p.lat ?? p.y ?? p.Y ?? 'No informada'}</div>
+            <div><b>Total de Padrones Declarados:</b> ${new Set(listaPadronesDeclarados).size.toLocaleString('es-UY')}</div>
             <div><b>Padrones declarados:</b> ${htmlTagsPadrones || '<i>Ninguno</i>'}</div>
 
             <div class="card-section">
