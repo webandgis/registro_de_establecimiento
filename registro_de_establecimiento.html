@@ -339,6 +339,14 @@
           <div id="statusLocalidadSel" class="status-indicator">Localidades disponibles: 0</div>
         </div>
 
+        <div class="form-group" style="padding: 10px; border: 1px solid #dbeafe; border-radius: 8px; background: #f8fafc;">
+          <label style="color: #1d4ed8;">🔎 Buscar padrón en el GeoJSON (PADRON):</label>
+          <input type="text" id="inputBuscarPadron" placeholder="Ingrese uno o varios padrones separados por coma (ej. 92208,431075)" inputmode="numeric" disabled onkeydown="if(event.key === 'Enter'){ event.preventDefault(); buscarPadronGeoJSON(); }">
+          <button type="button" id="btnBuscarPadron" class="btn-primary" onclick="buscarPadronGeoJSON()" disabled>Buscar padrón(es)</button>
+          <button type="button" class="btn-secondary" onclick="limpiarBusquedaPadron()">Limpiar búsqueda</button>
+          <div id="statusBuscarPadron" class="status-indicator">Cargue el GeoJSON para habilitar la búsqueda.</div>
+        </div>
+
         <div class="form-group">
           <label>GeoJSON Departamentos (deptos):</label>
           <input type="file" id="inputDeptos" accept=".geojson,.json" disabled readonly onchange="cargarDeptos(event)">
@@ -523,6 +531,7 @@
     let geojsonLocINE = null;
 
     let bboxesFeatures = []; 
+    let indicePadrones = new Map();
     let bboxesDeptos = [];
     let bboxesLocINE = [];
 
@@ -545,6 +554,19 @@
     const connectionLinesGroup = L.layerGroup().addTo(map);
     const padronLabelsGroup = L.layerGroup().addTo(map);
     const userPolygonsGroup = L.layerGroup().addTo(map);
+    const padronBusquedaLayer = L.geoJSON(null, {
+      style: {
+        color: "#dc2626",
+        weight: 4,
+        opacity: 1,
+        fillColor: "#facc15",
+        fillOpacity: 0.48
+      },
+      onEachFeature: function(feature, layer) {
+        const props = getGeoJSONProps(feature.properties);
+        layer.bindPopup(`<b>Padrón:</b> ${props.padron}<br><b>Localidad:</b> ${props.nomloccat || 'Sin dato'}<br><b>Departamento:</b> ${props.nomdepto || 'Sin dato'}`);
+      }
+    }).addTo(map);
 
     L.control.layers({
       "Satelital (Esri)": esriSatellite,
@@ -720,7 +742,21 @@
         try {
           rawGeoJSON = JSON.parse(evt.target.result);
           bboxesFeatures = rawGeoJSON.features.map(f => turf.bbox(f));
-          
+          indicePadrones = new Map();
+          rawGeoJSON.features.forEach((feature, index) => {
+            const padron = cleanPadron(getGeoJSONProps(feature.properties).padron);
+            if (!padron) return;
+            if (!indicePadrones.has(padron)) indicePadrones.set(padron, []);
+            indicePadrones.get(padron).push(index);
+          });
+
+          const inputBuscar = document.getElementById('inputBuscarPadron');
+          const btnBuscar = document.getElementById('btnBuscarPadron');
+          inputBuscar.disabled = false;
+          btnBuscar.disabled = false;
+          document.getElementById('statusBuscarPadron').innerHTML = `Búsqueda habilitada: <b>${indicePadrones.size.toLocaleString('es-UY')} padrones distintos</b>`;
+          document.getElementById('statusBuscarPadron').style.color = "#16a34a";
+          limpiarBusquedaPadron(false);
           poblarSelectorLocalidades();
           actualizarIndicadores();
           limpiarCapaGeoJSON();
@@ -730,6 +766,94 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    function buscarPadronGeoJSON() {
+      const input = document.getElementById('inputBuscarPadron');
+      const status = document.getElementById('statusBuscarPadron');
+      // Permite ingresar uno o varios padrones separados por coma.
+      const padronesBuscados = [...new Set(
+        input.value.split(',').map(valor => cleanPadron(valor)).filter(Boolean)
+      )];
+
+      if (!rawGeoJSON || !rawGeoJSON.features) {
+        status.textContent = 'Primero cargue el GeoJSON de padrones reales.';
+        status.style.color = "#dc2626";
+        return;
+      }
+      if (!padronesBuscados.length) {
+        status.textContent = 'Ingrese uno o varios números de padrón separados por coma.';
+        status.style.color = "#dc2626";
+        input.focus();
+        return;
+      }
+
+      const localidadSeleccionada = cleanStr(document.getElementById('selectLocalidadGeoJSON').value);
+      const indicesUnicos = new Set();
+      const padronesEncontrados = [];
+      const padronesNoEncontrados = [];
+
+      padronesBuscados.forEach(padronBuscado => {
+        let indices = indicePadrones.get(padronBuscado) || [];
+        if (localidadSeleccionada && indices.length > 1) {
+          const indicesEnLocalidad = indices.filter(index =>
+            cleanStr(getGeoJSONProps(rawGeoJSON.features[index].properties).nomloccat) === localidadSeleccionada
+          );
+          if (indicesEnLocalidad.length) indices = indicesEnLocalidad;
+        }
+
+        if (!indices.length) {
+          padronesNoEncontrados.push(padronBuscado);
+        } else {
+          padronesEncontrados.push({ padron: padronBuscado, cantidad: indices.length });
+          indices.forEach(index => indicesUnicos.add(index));
+        }
+      });
+
+      padronBusquedaLayer.clearLayers();
+      const indicesFinales = [...indicesUnicos];
+      if (indicesFinales.length) {
+        const encontrados = indicesFinales.map(index => rawGeoJSON.features[index]);
+        padronBusquedaLayer.addData({ type: 'FeatureCollection', features: encontrados });
+        const bounds = padronBusquedaLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [35, 35], maxZoom: 18 });
+        }
+        padronBusquedaLayer.eachLayer(layer => layer.bringToFront());
+        if (indicesFinales.length === 1) {
+          padronBusquedaLayer.eachLayer(layer => layer.openPopup());
+        }
+      }
+
+      const resumenEncontrados = padronesEncontrados.length
+        ? `<div><b>Encontrados (${padronesEncontrados.length}):</b> ${padronesEncontrados.map(item => `${item.padron} (${item.cantidad} coincidencia(s))`).join(', ')}</div>`
+        : '<div><b>No se encontró ninguno de los padrones ingresados.</b></div>';
+      const resumenNoEncontrados = padronesNoEncontrados.length
+        ? `<div style="margin-top:4px;color:#dc2626;"><b>No encontrados (${padronesNoEncontrados.length}):</b> ${padronesNoEncontrados.join(', ')}</div>`
+        : '<div style="margin-top:4px;color:#15803d;"><b>Todos los padrones ingresados fueron encontrados.</b></div>';
+      const localidades = [...new Set(indicesFinales.map(index =>
+        getGeoJSONProps(rawGeoJSON.features[index].properties).nomloccat
+      ).filter(Boolean))];
+      status.innerHTML = `${resumenEncontrados}${resumenNoEncontrados}` +
+        (localidades.length ? `<div style="margin-top:4px;"><b>Localidad(es):</b> ${localidades.join(', ')}</div>` : '') +
+        (indicesFinales.length ? '<div style="margin-top:4px;">Los polígonos encontrados se resaltaron en amarillo.</div>' : '');
+      status.style.color = indicesFinales.length ? "#15803d" : "#dc2626";
+    }
+
+    function limpiarBusquedaPadron(limpiarCampo = true) {
+      if (typeof padronBusquedaLayer !== 'undefined') padronBusquedaLayer.clearLayers();
+      const input = document.getElementById('inputBuscarPadron');
+      const status = document.getElementById('statusBuscarPadron');
+      if (limpiarCampo && input) input.value = '';
+      if (status) {
+        if (rawGeoJSON && rawGeoJSON.features) {
+          status.innerHTML = `Búsqueda habilitada: <b>${indicePadrones.size.toLocaleString('es-UY')} padrones distintos</b>`;
+          status.style.color = "#16a34a";
+        } else {
+          status.textContent = 'Cargue el GeoJSON para habilitar la búsqueda.';
+          status.style.color = "#64748b";
+        }
+      }
     }
 
     function poblarSelectorLocalidades() {
