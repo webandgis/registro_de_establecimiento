@@ -1571,6 +1571,11 @@
           const idPunto = p.id_simple || p.id || (i + 1);
           const nombrePunto = p.nombre_establecimiento || p.nombre || p.establecimiento || 'Establecimiento';
           const direccion = p.direccion || '';
+          const diasActivosMes = p.pla_dias_activos_mes ?? null;
+          const diasActivosNumero = (diasActivosMes === null || diasActivosMes === '') ? NaN : Number(diasActivosMes);
+          const alertaDiasActivos = Number.isFinite(diasActivosNumero) && diasActivosNumero > 31
+            ? `<div style="margin-top:6px;padding:8px;background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:4px;color:#b91c1c;"><b>⚠️ ALERTA:</b> Se declararon ${diasActivosNumero} días activos en el mes; el máximo esperado es 31.</div>`
+            : '';
 
           const tramites = p.tramites_seleccionados || [];
           let htmlTramites = '';
@@ -1592,6 +1597,8 @@
               <div style="margin-top:6px;"><b>Localidad seleccionada:</b> ${localidadSeleccionada}</div>
               <div><b>Total de Padrones Declarados:</b> ${new Set(listaPadronesDeclarados).size.toLocaleString('es-UY')}</div>
               <div><b>Padrones declarados:</b> ${listaPadronesDeclarados.join(', ') || '<i>Ninguno</i>'}</div>
+              <div><b>Días activos en el mes (pla_dias_activos_mes):</b> ${diasActivosMes ?? '<i>No informado</i>'}</div>
+              ${alertaDiasActivos}
               <div class="card-section">
                 <div class="card-section-title">Trámites Ingresados en el Registro</div>
                 ${htmlTramites}
@@ -1783,6 +1790,8 @@
             <div><b>Coordenada Y:</b> ${p.coordenada_y ?? p.latitud ?? p.lat ?? p.y ?? p.Y ?? 'No informada'}</div>
             <div><b>Total de Padrones Declarados:</b> ${new Set(listaPadronesDeclarados).size.toLocaleString('es-UY')}</div>
             <div><b>Padrones declarados:</b> ${htmlTagsPadrones || '<i>Ninguno</i>'}</div>
+            <div><b>Días activos en el mes (pla_dias_activos_mes):</b> ${diasActivosMes ?? '<i>No informado</i>'}</div>
+            ${alertaDiasActivos}
 
             <div class="card-section">
               <div class="card-section-title">Comparación de Padrones</div>
